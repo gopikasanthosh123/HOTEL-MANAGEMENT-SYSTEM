@@ -1,0 +1,1200 @@
+import csv
+import random
+import time
+from datetime import date,timedelta,datetime
+import datetime
+import calendar
+from prettytable import PrettyTable
+
+
+#More Rooms can be added here
+l_ph=['401']        #Penthouse suits
+l_bs=['301','302']    #Business class suites
+l_ps=['201','202']    #Premium suites
+l_cs=['101','102','103']#Classic suites
+
+
+#Cost of rooms can be Updated here
+cost_ph=11500#Cost of Penthouse Suites
+cost_bs=10000#Cost of Business Suites
+cost_ps=8000 #Cost of Premium Suites
+cost_cs=6500 #Cost of Classic Suites
+
+
+main_file="E:\\Comp Sc\\g_MAIN.csv"
+temp_file="E:\\Comp Sc\\g_Main_temp.csv"
+room_file="E:\\Comp Sc\\g_rooms.csv"
+
+
+
+def copy(file_2,file_1):
+    f2=open(file_2,"r",newline="")
+    f1=open(file_1,"w",newline="")
+    f1.truncate()
+    csv_r=csv.reader(f2)
+    csv_w=csv.writer(f1)
+    for i in csv_r:
+        csv_w.writerow(i)
+    f1.close()
+    f2.close()
+
+def findday(dt):
+        date_=dt.weekday() 
+        return (calendar.day_name[date_])
+    
+def ifexists_bkgno(g_id,bkg_no):
+    f=open(main_file,'r',newline="")
+    r=csv.reader(f)
+    for row in r:
+        if row[0]==g_id and row[5]==bkg_no:
+            f.close()
+            return True
+    f.close()
+    return False
+    
+
+def is_validdate(y,m,d):
+    try:
+        d=date(int(y),int(m),int(d))
+        return True
+    except:
+        return False
+    
+def bkg_no(g_id):
+    maxx=0
+    with open(main_file,"r",newline="") as f:
+        csv_r=csv.reader(f)
+        for row in csv_r:
+            if row[0]==g_id:
+                if row[5].isdigit() and int(row[5])>maxx:
+                    maxx=int(row[5])
+    return str(maxx+1)
+
+
+def rno_allot(r_list,r_type,room,d_in,diff):
+    result=True
+    f=open(room_file,"r",newline="")
+    r=csv.reader(f)
+    stay_dates=[]
+    e=[]
+    r_available=len(r_list)
+    for i in range(diff):
+        x=[]
+        date_=d_in+timedelta(days=i)
+        date_str=str(date_)
+        stay_dates.append(date_str)
+        temp=len(r_list)
+        for row in r:
+            if row[1]==r_type:
+                if date_str in row:
+                    if r_available>1:
+                            r_available-=1
+                            temp-=1
+                    else:
+                            r_available="Booked Out!"
+                            temp="Booked Out"
+                            result=False
+            else:
+                continue
+        x=[date_str,findday(date_),room,temp]
+        e.append(x)
+            
+    if result==False:
+        return False,e
+    else:
+        #print(r_available)
+        room_no=r_list[len(r_list)-r_available]
+        f.seek(0)
+        r=csv.reader(f)
+        for row in r:
+            if row[0]==room_no:
+                row_dup=row
+                for i in stay_dates:
+                    row_dup.append(i)
+                break            
+        f.seek(0)
+        r=csv.reader(f)
+        f2=open(temp_file,"w",newline="")
+        w=csv.writer(f2)
+        for row in r:
+            if row[0]!=room_no:
+                w.writerow(row)
+            else:
+                w.writerow(row_dup)                        
+        f2.close()
+        f.close()
+        copy(temp_file,room_file)
+        return room_no,stay_dates
+    
+def avail_calc(check_out=date.today()+timedelta(days=7),check_in=date.today(),diff=7):
+    if diff==7 and check_in==date.today() and check_out==date.today()+timedelta(days=7):
+        print()
+        print("{:>50}".format("Room Availabilty over the next week"))
+        print("{:>50}".format("_"*35))
+        print()
+    else:
+        print("\n\n")
+        print("{:>45}{}{}{}".format("Room Availability between dates ",check_in," and ",check_out))
+        print("{:>70}".format("_"*60))
+        print()
+    f=open(room_file,"r",newline="")
+    csv_r=csv.reader(f)
+    x=PrettyTable()
+    x.field_names=["Date","Day","Penthouse","Bussiness","Premium","Classic"]
+    for i in range(diff):
+        no_ph=len(l_ph)
+        no_bs=len(l_bs)
+        no_ps=len(l_ps)
+        no_cs=len(l_cs)
+        date_=check_in+timedelta(days=i)
+        date_str=str(date_)
+        f.seek(0)
+        r=csv.reader(f)
+        for row in csv_r:
+            if len(row)==2:
+                continue
+            else:
+                if row[1]=="ph":
+                    if date_str in row:
+                        no_ph-=1
+                    if no_ph==0:
+                        no_ph="Booked Out"
+                elif row[1]=="bs":
+                    if date_str in row:
+                        no_bs-=1
+                    if no_bs==0:
+                        no_bs="Booked Out"
+                elif row[1]=="ps":
+                    if date_str in row:
+                        no_ps-=1
+                    if no_ps==0:
+                        no_ps="Booked Out"
+                elif row[1]=="cs":
+                    if date_str in row:
+                        no_cs-=1
+                    if no_cs==0:
+                        no_cs="Booked Out"
+        x.add_row([date_str,findday(date_),no_ph,no_bs,no_ps,no_cs])
+    print(x)
+    print()
+    return
+
+
+
+def disp_avail():
+    avail_calc()
+    tries=3
+    while True:
+        while True:
+            print("  "*15,end="")
+            print("Enter the dates to check availability:-")
+            print()
+            print("  "*15,end="")
+            d1=input("Enter the check in date in the dd format:")
+            print("  "*15,end="")
+            m1=input("Enter the check in month in the mm format:")
+            print("  "*15,end="")
+            y1=input("Enter the check in year in the yyyy format:")
+            if is_validdate(y1,m1,d1)==True:
+                d_in=date(int(y1),int(m1),int(d1))
+                break
+            else:
+                print()
+                print("  "*20,"The date you have entered is Invalid!")
+                print("Make sure you enter only integral numbers keeping in mind the date has to correspond to the month\
+ and the month entered is between 1 and 12")
+                print()
+                continue
+        while True:
+            print()
+            print("  "*15,end="")
+            d2=(input("Enter the check out date out the dd format:"))
+            print("  "*15,end="")
+            m2=(input("Enter the check out month out the mm format:"))
+            print("  "*15,end="")
+            y2=(input("Enter the check out year out the yyyy format:"))
+            if is_validdate(y2,m2,d2)==True:
+                d_out=date(int(y2),int(m2),int(d2))
+                break
+            else:
+                print()
+                print("  "*20,"The date you have entered is Invalid!")
+                print("  "*2,end="")
+                print("Make sure you enter only integral numbers,after ensuring that the date  has to correspond the month\
+and the month entered is between 1 and 12")
+                print("  "*26,end="")
+                print("Try Again!")
+                print()
+        z=d_out-d_in
+        diff=z.days
+        y=d_in-date.today()
+        check_yr=y.days            
+        p=d_out-date.today()
+        if_past=p.days
+        if check_yr<365 and diff>0 and check_yr>0:
+                avail_calc(d_out,d_in,diff)
+                break
+        elif diff==0:
+            print()
+            print("Sorry the minimum standard check in time is from 12 noon of a day to 12 noon of the next day , So you have to input a check in date prior to the check out date")
+            print("  "*15,end="")
+            print("You have entered a check-out date that is same as the check-in date!")
+            print("  "*15,end="")
+            print("You have ",tries," more tries")
+            print("  "*15,end="")
+            print("Enter the dates again")
+            print()
+            tries-=1
+            continue
+        elif diff<0:
+            print()
+            print("  "*15,end="")
+            print("You have entered a check-out date before a check-in date!")
+            print("  "*15,end="")
+            print("You have ",tries," more tries")
+            print("  "*15,end="")
+            tries-=1
+            print("Enter the dates again")
+            print()
+            continue
+        elif check_yr>0:
+            print()
+            print("  "*15,end="")
+            print("Sorry!Booking is available online only for check-in dates upto a year away")
+            print("  "*15,end="")
+            print("You have ",tries," more tries")
+            tries-=1
+            print("  "*15,end="")
+            print("Enter the dates again")
+            print()
+            continue
+        elif check_yr<0:
+            print()
+            print("  "*15,end="")
+            print("Sorry!The check-in date you have requested for has already passed!")
+            print("  "*15,end="")
+            print("You have ",tries," more tries")
+            tries-=1
+            print("  "*15,end="")
+            print("Enter the dates again")
+            print()
+            continue
+        elif if_past<0:
+            print()
+            print("  "*15,end="")
+            print("Sorry,Your booking request includes booking requests on dates that have already passed! ")
+            print("  "*15,end="")
+            print("You have ",tries," more tries")
+            tries-=1
+            print("  "*15,end="")
+            print("Enter the dates again")
+            print()
+            continue
+        elif tries==0:
+            print()
+            print("  "*15,end="")
+            print("Invalid entry!You have run out of tries!")
+            print("  "*15,end="")
+            print("You will be directed to our main menu in a few seconds")
+            print()
+            time.sleep(3)
+            return
+    while True:
+        print("{:^112}".format("Do you want to continue?"))
+        print(" "*39,end="")
+        ch=input("Enter 'y' for yes and 'n' for no:")
+        if ch=='y':
+            print("\n\n")
+            break
+        elif ch=='n':
+            print()
+            print("{:^112}".format("You will be redirected to the main menu in a few seconds"))
+            print("\n\n")
+            time.sleep(3)
+            return
+        else:
+            print("\n\n")
+            print("{:^112}".format("Invalid Entry!Try Again"))
+            print()
+            continue  
+        
+    
+
+
+def disp_about():
+    f=open("E:\\Comp Sc\\about_hotel.txt","r")
+    x=f.read()
+    print(x)
+    f.close()
+  
+
+def ph_check(g_ph):
+    with open(main_file,"r",newline="") as f:
+        r=csv.reader(f)
+        for row in r:
+            if g_ph==row[3]:
+                return True #Returns True if ph_no IS found
+        else:
+            return False  
+    
+  
+def check_id(id_):
+    with open(main_file,"r",newline="")as f:
+        r=csv.reader(f)
+        for row in r:
+            if id_ in row:
+                return True  #returns True if g_id IS found
+        else:
+           return False
+           
+def create():
+    print(" "*20,"Thank you for choosing to register with us! Serving you is an honour!")
+    print()
+    print("  "*15,end="")
+    g_name=input("Enter your full name:")
+    print("  "*15,end="")
+    g_add=input("Enter your current residential address:")
+    tries=3
+    while tries>=0:
+        print("  "*15,end="")
+        g_ph=input("Enter your 10 digit phone number:")
+        if ph_check(g_ph)==False and len(g_ph)==10 and g_ph.isdigit():
+            g_id=str(random.randrange(10,100))+chr(random.randrange(65,91))+chr(random.randrange(65,91))
+            while True:
+                if check_id(g_id)==False:
+                    break
+                else:
+                    g_id=str(random.randint(100))+chr(random.randrange(65,92))+chr(random.randraange(65,92))
+            print("  "*15,end="")
+            pass1=input("Enter a password of your choice:")
+            print("  "*15,end="")
+            pass2=input("Enter your password again:")
+            tries=3
+            while tries>=0:
+                if pass1!=pass2:
+                    if tries==0:
+                        print("\n\n")
+                        print("  "*15,"Sorry,the entered passwords dont match!")
+                        print("  "*18,"You have run out of tries")
+                        print("  "*13,"You will be redirected to the meain menu in a few seconds")
+                        print("\n\n")
+                        time.sleep(3)
+                        return
+                    print()
+                    print("  "*15,"Sorry,the entered passwords dont match ,Try Again!")
+                    print("  "*18,"You have",tries,"more try(s)")
+                    tries-=1
+                    print()
+                    print("  "*15,end="")
+                    pass1=input("Enter a password of your choice:")
+                    print("  "*15,end="")
+                    pass2=input("Enter your password again:")
+                elif pass1==pass2:
+                    break
+            l=[g_id,g_name,g_add,g_ph,pass1,"nil","nil","nil","nil","nil","nil","nil"]
+            with open(main_file,"a",newline="") as f:
+                csv_w=csv.writer(f)
+                csv_w.writerow(l)
+            print("\n"*2)
+            print("{:>60}".format("Your account has been successfully created!"))
+            print("{:>45}{}".format("Your Guest ID is:",l[0]))
+            print("{:>74}".format("Remember your guest ID and password as those are your login credentials"))
+            print("\n"*2)
+            time.sleep(3)
+            break            
+        elif tries==0:
+            print()
+            print("{:^112}".format("Invalid Entry!"))
+            print("{:^112}".format("Sorry you have run out of attempts"))
+            print("{:^112}".format("You will be redirected to the main page in a few seconds where you can opt to try again"))
+            print()
+            time.sleep(2)
+            return 
+        elif len(g_ph)!=10:
+            print()
+            print("{:^112}".format("Invalid Entry!"))
+            print("{:^112}".format("Make sure the phone no. you entered has precisley 10 digits"))
+            print("  "*21,end="")
+            print("You have ",tries," more trie(s)")
+            print()
+            tries-=1
+            continue
+        elif g_ph.isdigit()==False:
+            print()
+            print("{:^112}".format("Invalid Entry!"))
+            print("{:^112}".format("The phone no.you entered contains non-numeric characters!"))
+            print("{:^112}".format("Make sure the phone no. you entered has precisley 10 numeric digits"))
+            print("  "*21,end="")
+            print("You have ",tries," more trie(s)")
+            print()
+            tries-=1
+            continue    
+        elif ph_check(g_ph)!=False:
+            print()
+            print("{:^112}".format("The phone no. you have entered already exists in our records!"))
+            print("  "*21,end="")
+            print("You have ",tries," more try(s)")
+            tries-=1
+            print()
+            continue  
+
+
+
+def login():
+    print("  "*15,"You will need to have a Hilton Guest Account to make a Booking\n")
+    tries=3
+    while True:
+        print("  "*20,"Do You have an Account with Us?\n","  "*20,end="")
+        opt=input("Enter 'y' if Yes and 'n' if No:")
+        if opt.lower()=="n":
+            print("\n","  "*5,end="")
+            print("You will be redirected to the main page in a few seconds where you can opt to create an account with us")
+            time.sleep(3)
+            return None
+        elif opt.lower()=="y":
+            tries=3
+            while True:
+                print("\n","  "*20,end="")
+                g_id=input("Enter your guest ID :")
+                if check_id(g_id)==True:
+                    with open(main_file,"r",newline="")as f:
+                        csv_r=csv.reader(f)
+                        for row in csv_r:
+                            if row[0]==g_id:
+                                global profile
+                                profile=row
+                                tries=3
+                                while True:
+                                    print("\n","  "*20,end="")
+                                    g_pass=input("Enter your password:")
+                                    if g_pass==profile[4]:
+                                        print("\n","  "*17,end="")
+                                        print("Hello ",profile[1],"!Good to see you again!")
+                                        return profile
+                                    elif tries!=0:
+                                        print("\n","  "*20,end="")
+                                        print("Incorrect password!")
+                                        print("  "*15,end="")
+                                        print("You have ",tries," more try(s) to input your password correctly")
+                                        tries-=1
+                                    elif tries==0:
+                                        print("\n","  "*30,end="")
+                                        print("Incorrect password!")
+                                        print("\n","  "*20,end="")
+                                        print("You have run out of tries to input the correct password!")
+                                        return False
+                elif tries==0:
+                    print()
+                    print("  "*15,end="")
+                    print("Sorry the Guest ID you entered is Invalid!")
+                    print("  "*20,end="")
+                    print("You have run out of tries!")
+                    print("\n","  "*5,end="")                    
+                    print("You will be redirected to the main page in a few seconds where you can opt to try again or opt to create an account with us")
+                    time.sleep(4)
+                    return
+                elif tries!=0:
+                    print()
+                    print("  "*20,end="")
+                    print("Sorry the Guest ID you entered is Invalid!")
+                    print("  "*20,end="")
+                    print(" You have ",tries," more try(s)")
+                    tries-=1
+                    print()
+                    continue
+        else:
+            print()
+            print("  "*20,"Invalid Entry! Try again")
+            print()
+            continue
+        
+def book(x):
+    if x==False:
+        print("  "*15,"Sorry your login credentials are invalid, you cant make a booking right now!")
+        print("You will be redirected to our Main Page in a few seconds where you can try and login  again or create an account if you dont have one")
+        time.sleep(4)
+        return
+    elif x==None:
+        return
+    else:
+        while True:
+            print()
+            print("  "*15,end="")
+            print("Enter:-")
+            print("  "*15,end="")
+            print("'1' To choose the Classic suite-Rs.6,500/day")
+            print("  "*15,end="")
+            print("'2' To choose the Premium suite -Rs.8,000/day")
+            print("  "*15,end="")
+            print("'3' To choose the Business suite-Rs.10,000/day")
+            print("  "*15,end="")
+            print("'4' To choose the Penthouse suite-Rs.11,500/day")
+            print("  "*15,end="")
+            opt=input()
+            if opt=='4':
+                r_type="ph"
+                r_list=l_ph
+                r_cost=cost_ph
+                room="Pentouse Suite"
+                break
+            elif opt=='3':
+                    r_type="bs"
+                    r_list=l_bs
+                    r_cost=cost_bs
+                    room="Business Suite"
+                    break
+            elif opt=='2':
+                    r_type="ps"
+                    r_list=l_ps
+                    r_cost=cost_ps
+                    room="Premium Suite"
+                    break
+            elif opt=='1':
+                    r_type="cs"
+                    r_list=l_cs
+                    r_cost=cost_cs
+                    room="Classic Suite"
+                    break
+            else:
+                print("\n","  "*25,end="")
+                print("Invalid entry!")
+                print("  "*26,end="")
+                print("Try Again")
+                continue
+        print()
+        tries=3
+        while tries>0:
+            while True:
+                print("  "*15,end="")
+                d1=(input("Enter the check in date in the dd format:"))
+                print("  "*15,end="")
+                m1=(input("Enter the check in month in the mm format:"))
+                print("  "*15,end="")
+                y1=(input("Enter the check in year in the yyyy format:"))
+                if is_validdate(y1,m1,d1)==True:
+                    d_in=date(int(y1),int(m1),int(d1))
+                    break
+                else:
+                    print()
+                    print("  "*20,"The date you have entered is Invalid!")
+                    print("Make sure you enter only integral numbers keeping in mind that the date has to correspond to the month\
+ and the month entered is between 1 and 12")
+                    print()
+                    continue
+            print()
+            while True:
+                print("  "*15,end="")
+                d2=(input("Enter the check out date in the dd format:"))
+                print("  "*15,end="")
+                m2=(input("Enter the check out month in the mm format:"))
+                print("  "*15,end="")
+                y2=(input("Enter the check out year in the yyyy format:"))
+                if is_validdate(y2,m2,d2)==True:
+                    d_out=date(int(y2),int(m2),int(d2))
+                    break
+                else:
+                    print()
+                    print("  "*20,"The date you have entered is Invalid!")
+                    print("Make sure you enter only integral numbers,after ensuring that the date  has to correspond to the month\
+ and the month entered is between 1 and 12")
+                    print("Try Again!")
+                    print()
+                    continue                
+            z=d_out-d_in
+            diff=z.days
+            y=d_in-(date.today())
+            check_yr=y.days            
+            p=date.today()-d_out
+            if_past=p.days
+            if check_yr<365 and diff>0 and check_yr>0:
+                res=rno_allot(r_list,r_type,room,d_in,diff)
+                if res[0]!=False:
+                    bk_status="Active"
+                    temp=[bkg_no(x[0]),bk_status,res[0],r_type,res[1],diff,diff*r_cost]
+                    new_row=x[0:5]+temp
+                    f=open(main_file,"a",newline="")
+                    w=csv.writer(f)
+                    w.writerow(new_row)
+                    f.close()
+                    print("\n"*2)
+                    print("{:^100}".format("Your Booking has been Succefully made!"))
+                    print("  "*19,"Your Bill Amount is Rs.",diff*r_cost)
+                    print("{:^100}".format("The Bill Amount can be paid Onsite during Check in"))                                     
+                    print("{:^100}".format("Looking forward to your stay with us........"))
+                    print("\n"*2)
+                elif res[0]==False:
+                    print()
+                    print("  "*5,"Sorry!the combination of dates you have entered for the room type you have requested is booked out!")
+                    print()
+                    print("  "*5,"The following table shows the availability of rooms during the dates you've requested booking:-")
+                    avail_calc(d_out,d_in,diff)                    
+                    print()
+                    print("You will be redicted to our main menu\
+in a few seconds where you can opt to check the availabilty of rooms\
+ on the desired dates and try booking again")
+                return
+            elif diff==0:
+                    print()
+                    print("  "*15,end="")
+                    print("Sorry the minimum standard check in time is from 12 noon of a day to ")
+                    print("  "*15,end="")
+                    print("12 noon of the next day , So you have to input a check in atleast 1 date")
+                    print("  "*15,end="")   
+                    print("prior to the check out date")
+                    print()
+                    print("  "*15,end="")
+                    print("You have entered a check-out date that is same as the check-in date!")
+                    print("  "*15,end="")
+                    print("You have ",tries," more tries")
+                    print("  "*15,end="")
+                    print("Enter the dates again")
+                    print()
+                    tries-=1
+            elif check_yr<0:
+                print()
+                print("  "*15,end="")
+                print("Sorry!The check-in date you have requested for has already passed!")
+                print("  "*15,end="")
+                print("You have ",tries," more tries")
+                tries-=1
+                print("  "*15,end="")
+                print("Enter the dates again")
+                print()
+                
+            elif diff<0:
+                    print()
+                    print("  "*15,end="")
+                    print("You have entered a check-out date before a check-in date!")
+                    print("  "*15,end="")
+                    print("You have ",tries," more tries")
+                    print("  "*15,end="")
+                    tries-=1
+                    print("Enter the dates again")
+                    print()
+            elif check_yr>365:
+                    print()
+                    print("  "*15,end="")
+                    print("Sorry!Booking is available online only for check-in dates upto a year away")
+                    print("  "*15,end="")
+                    print("You have ",tries," more tries")
+                    tries-=1
+                    print("  "*15,end="")
+                    print("Enter the dates again")
+                    print()
+            elif if_past<0:
+                print()
+                print("  "*15,end="")
+                print("Sorry,Your request includes booking requests on dates that have already passed! ")
+                print("  "*15,end="")
+                print("You have ",tries," more tries")
+                tries-=1
+                print("  "*15,end="")
+                print("Enter the dates again")
+                print()                
+            elif tries==0:
+                    print()
+                    print("  "*15,end="")
+                    print("Invalid entry!You have run out of tries!")
+                    print("  "*15,end="")
+                    print("You will be directed to our main menu in a few seconds")
+                    print()
+                    time.sleep(3)
+                    return
+
+
+
+                      
+def bkg_details(l):
+    if l==None:        
+        return
+    elif l==False:
+        print("\n\n")
+        print("{:^152}".format("Sorry you cannot view your booking details without logging in successfuly!"))
+        print("{:^152}".format("You will be reditrected to the main menu in a fewn seconds where you can create an ccount with us or try logging in again"))
+              
+    else:
+        g_id=l[0]
+        tries=3
+        while tries>=3:
+            while True:
+                print("\n\n")
+                print("  "*20,end="")
+                print("Enter:-")
+                print("  "*20,end="")
+                print("'1' To see details of Active Bookings")
+                print("  "*20,end="")
+                print("'2' To see details of Past Bookings")
+                print("  "*20,end="")
+                opt=input()
+                if opt=='1':
+                    f=open(main_file,"r",newline="")
+                    r=csv.reader(f)
+                    y=0
+                    x=PrettyTable()
+                    x.field_names=["No.","Booking Status","Room No","Room Type"\
+                                  ,"Dates of Stay","Stay Duration","Total Bill"]
+                    for row in r:
+                        if row[0]==g_id and row[6]=="Active":
+                            y+=1
+                            x.add_row([y]+row[6:])
+                    if y>0:
+                        print("\n\n")
+                        print("{:^192}".format(" Active Bookings"))
+                        print("{:^192}".format("_____________________________\n"))
+                        print(x)
+                    else:
+                        print()
+                        print("You Have No Active Bookings!")
+                        print("\n\n")                
+                elif opt=='2':
+                    f=open(main_file,"r",newline="")
+                    r=csv.reader(f)
+                    y=0
+                    x=PrettyTable()
+                    x.field_names=["No.","Booking Status","Room No","Room Type"\
+                                   ,"Dates of Stay","Stay Duration","Total Bill"]
+                    for row in r:
+                        if row[0]==g_id and row[6]=="Inactive":
+                            y+=1
+                            x.add_row([y]+row[6:])
+                    if y>0:
+                        print("\n\n")
+                        print("{:^192}".format("Booking History"))
+                        print("{:^192}".format("_____________________________"))
+                        print()               
+                        print(x)
+                        print("\n\n")
+                    else:
+                        print()
+                        print("{:^192}".format("You Have No Inactive Bookings!"))
+                        print()
+                else:
+                    print("\n\n")
+                    print("  "*22,end="")
+                    print("Invalid Entry!Try Again")
+                    print()
+                    continue
+                while True:
+                    print("{:^192}".format("Do you want to continue?"))
+                    print("  "*40,end="")
+                    ch=input("Enter 'y' for yes and 'n' for no:")
+                    if ch=='y':
+                        break
+                    elif ch=='n':
+                        return
+                    else:
+                        print("\n\n")
+                        print("{:^192}".format("Invalid Entry!Try Again"))
+                        print()
+                        continue
+                        
+    
+def cancel(x):
+    if x==None:
+            return()
+    elif x==False:
+        print()
+        print("  "*15,end="")
+        print("Sorry you cant make the cancellation right now as your login credentials are invalid")
+        print("You will be redirected to our Main Page in a few seconds where you can try and login  again or create an account if you dont have one")
+        print()
+        time.sleep(4)
+        return
+    else:
+        g_id=x[0]
+        f=open(main_file,"r",newline="")
+        r=csv.reader(f)
+        table=PrettyTable()
+        y=0
+        table.field_names=["No.","Booking Status","Room No","Room Type"\
+                           ,"Dates of Stay","Stay Duration","Total Bill"]
+        for row in r:
+            if row[0]==g_id and row[6]=="Active":
+                table.add_row(row[5:])
+                y+=1
+        if y>0:
+            print("\n\n\n")
+            print("{:^130}".format("The Following are your Active Bookings:-"))
+            print()
+            print()
+            print(table)
+        else:
+            print()
+            print("  "*15,end="")
+            print("You Have No Active Bookings to Cancel at the moment!")
+            print("  "*15,end="")
+            print("You will be redirected to our main page in a few seconds")
+            print()
+            time.sleep(3)
+            return
+        count=3
+        while count>=0:
+            print()
+            print("  "*15,end="")
+            opt=input("Enter the booking number of the booking you want to cancel:")
+            if ifexists_bkgno(g_id,opt)==True:
+                f.seek(0)
+                r=csv.reader(f)
+                for row in r:
+                    if row[0]==g_id and str(row[5])==opt:
+                        print()
+                        print("  "*16,end="")
+                        print("Are you sure you want to proceed with the cancellation?")
+                        print("  "*21,end="")
+                        ch=input("Enter 'y' for yes and 'n' for no:")
+                        if ch.lower()=="y":
+                            f1=open(main_file,"r",newline="")
+                            f2=open(temp_file,"w",newline="")
+                            w=csv.writer(f2)
+                            r=csv.reader(f1)
+                            for row in r:
+                                if row[0]==g_id and str(row[5])==opt:
+                                    stay_dates=row[9]
+                                    rno=row[7]
+                                else:
+                                    w.writerow(row)
+                            f1.close()
+                            f2.close()
+                            copy(temp_file,main_file)
+                            stay_dates=stay_dates[1:-1]
+                            stay_dates1=stay_dates.split(",")
+                            stay_dates2=[]
+                            for i in range(len(stay_dates1)):
+                                if i==0:
+                                    stay_dates2.append(stay_dates1[i][1:-1])
+                                else:
+                                    stay_dates2.append(stay_dates1[i][2:-1])
+                            f2=open(temp_file,"w",newline="")
+                            f3=open(room_file,"r",newline="")
+                            r=csv.reader(f3)
+                            for row in r:
+                                if row[0]==rno:
+                                    temp=row
+                                    row_dup=list(set(row[2:])-set(stay_dates2))
+                            row_dup_final=temp[:2]+row_dup
+                            f3.seek(0)
+                            r=csv.reader(f3)
+                            f4=open(temp_file,"w",newline="")
+                            w=csv.writer(f4)
+                            for row in r:
+                                if row[0]==rno:
+                                    w.writerow(row_dup_final)   
+                                else:
+                                    w.writerow(row)
+                            f3.close()
+                            f4.close()
+                            copy(temp_file,room_file)
+                            print("\n\n")
+                            print("  "*17,end="")
+                            print("Your booking has been succefully cancelled!")
+                            print("  "*15,end="")
+                            print("You will now be redirected to the main page in a few seconds")
+                            time.sleep(3)
+                            return
+                        elif ch.lower()=="n":
+                            print("\n\n")
+                            print("  "*15,end="")
+                            print("Your request for cancellation has been dismissed!")
+                            print("  "*15,end="")
+                            print("You will be redirected to our main page in a few seconds")
+                            time.sleep(4)
+                            return
+                        else:
+                            print()
+                            print("  "*24,end="")
+                            print("Invalid Entry! Try Again")
+                            print()                           
+                            
+            else:
+                if count==0:
+                    print("\n\n")
+                    print("  "*15,end="")
+                    print("Sorry! The booking no.you entered does not exist!")
+                    print("  "*18,end="")
+                    print("You have run out of attempts")
+                    print("  "*13,end="")
+                    print("You will be redirected to the main page in a few seconds")
+                    time.sleep(3)
+                    return
+                else:
+                    print("\n\n")
+                    print("  "*15,end="")
+                    print("Sorry! The booking no. you entered does not exist")
+                    print("  "*19,end="")
+                    print("You have ",count," more Tries,Try again\n")
+                    count-=1
+                    continue
+                
+def current_add(g_id):
+    f=open(main_file,"r",newline="")
+    r=csv.reader(f)
+    for row in r:
+        if row[0]==g_id:
+            return row[2]
+        
+def update_prof(l):
+    if l==None:
+            return()
+    elif l==False:
+        print()
+        print("{:^150}".format("Sorry! You cant make the updation right now as your login credentials are Invalid"))
+        print("{:^150}".format("You will be redirected to our Main Page in a few seconds where you can try and login  again or create an account if you dont have one"))
+        print()
+        time.sleep(4)
+        return          
+    else:
+        print("\n\n\n")
+        print("{:^60}".format(" Your Current Profile"))
+        print("{:^60}".format("_"*30))
+        print()
+        x=PrettyTable()
+        x.field_names=["Guest ID","Name","Address","Phone No.","Password"]
+        x.add_row([l[0],l[1],l[2],l[3],l[4]])
+        print(x)
+        tries=3
+        print("\n\n")
+        while True:
+            print("  "*7,end="")
+            print("Enter:-")
+            print("  "*7,end="")
+            print("'1' To change your phone no.")
+            print("  "*7,end="")
+            print("'2' To change your address")
+            print("  "*7,end="")
+            ch=input()
+            print()
+            if ch=='1':
+                tries=3
+                while tries>=0:
+                    print("  "*15,end="")
+                    g_ph=input("Enter the new 10 digit phone number:")
+                    if ph_check(g_ph)==False and len(g_ph)==10 and g_ph.isdigit():
+                        l[3]=g_ph
+                        f1=open(main_file,"r",newline="")
+                        f2=open(temp_file,"w",newline="")
+                        r1=csv.reader(f1)
+                        w2=csv.writer(f2)
+                        for row in r1:
+                            if row[0]==l[0]:
+                                row_dup=row
+                                row_dup[3]=g_ph
+                                w2.writerow(row_dup)
+                            else:
+                                w2.writerow(row)
+                        f1.close()
+                        f2.close()
+                        copy(temp_file,main_file)
+                        print()
+                        print("{:^108}".format("Your Phone no. has been successfully updated!"))
+                        print("\n\n")
+                        print("{:^60}".format(" Your Updated Profile"))
+                        print("{:^60}".format("_"*32))
+                        print()
+                        x=PrettyTable()
+                        x.field_names=["Guest ID","Name","Address","Phone No.","Password"]
+                        f=open(main_file,"r",newline="")
+                        r=csv.reader(f)
+                        for row in r:
+                            if l[0]==row[0]:
+                                x.add_row([row[0],row[1],row[2],row[3],row[4]])
+                                break
+                        f.close()
+                        print(x)
+                        print("\n\n")
+                        break
+                    elif tries==0:
+                        print()
+                        print("{:^112}".format("Invalid Entry!"))
+                        print("{:^112}".format("Sorry you have run out of attempts"))
+                        print("{:^112}".format("You will be redirected to the main page in a few seconds where you can opt to try again"))
+                        print()
+                        time.sleep(2)
+                        return 
+                    elif len(g_ph)!=10:
+                        print()
+                        print("{:^112}".format("Invalid Entry!"))
+                        print("{:^112}".format("Make sure the phone no. you entered has precisley 10 digits"))
+                        print("  "*21,end="")
+                        print("You have ",tries," more trie(s)")
+                        print()
+                        tries-=1
+                        continue
+                    elif g_ph.isdigit()==False:
+                        print()
+                        print("{:^112}".format("Invalid Entry!"))
+                        print("{:^112}".format("The phone no.you entered contains non-numeric characters!"))
+                        print("{:^112}".format("Make sure the phone no. you entered has precisley 10 numeric digits"))
+                        print("  "*21,end="")
+                        print("You have ",tries," more trie(s)")
+                        print()
+                        tries-=1
+                        continue
+                        
+                    elif ph_check(g_ph)!=False:
+                        print()
+                        print("{:^112}".format("The phone no. you have entered already exists in our records!"))
+                        print("  "*21,end="")
+                        print("You have ",tries," more trie(s)")
+                        tries-=1
+                        print()
+                        continue
+            elif ch=='2':
+                tries=3
+                while tries>=0:
+                    print("  "*15,end="")
+                    g_ad=input("Enter the new address:")
+                    if g_ad==current_add(l[0]) and tries!=0:
+                        print()
+                        print("{:^112}".format("The address you entered is the same as your current adress in our records!"))
+                        print("{:^112}".format("You will be asked to enter the new address again"))
+                        print("  "*21,end="")
+                        print("You have ",tries," more tries")
+                        tries-=1
+                        print()
+                        continue
+                    elif tries==0:
+                        print()
+                        print("{:^112}".format("You have exceeded the no of permitted attempts to update the address!"))
+                        print("{:^112}".format("You will be redirected to our main menu in a few seconds"))
+                        print()
+                        time.sleep(2)
+                        return
+
+                    else:
+                        f1=open(main_file,"r",newline="")
+                        f2=open(temp_file,"w",newline="")
+                        f2.truncate()
+                        r1=csv.reader(f1)
+                        w2=csv.writer(f2)
+                        for row in r1:
+                            if l[0]==row[0]:
+                                row_dup=row
+                                row_dup[2]=g_ad
+                                w2.writerow(row_dup)
+                            else:
+                                w2.writerow(row)
+                        f1.close()
+                        f2.close()
+                        copy(temp_file,main_file)
+                        print("\n\n")
+                        print("  "*15,end="")
+                        print("{:112}".format("Your address has been successfully updated!"))
+                        print("\n\n")
+                        print("{:^60}".format(" Your Updated Profile"))
+                        print("{:^60}".format("_"*32))
+                        print()
+                        x=PrettyTable()
+                        x.field_names=["Guest ID","Name","Address","Phone No.","Password"]
+                        f=open(main_file,"r",newline="")
+                        r=csv.reader(f)
+                        for row in r:
+                            if l[0]==row[0]:
+                                x.add_row([row[0],row[1],row[2],row[3],row[4]])
+                            break
+                        print(x)
+                        print("\n\n")
+                        break
+            elif tries==0:
+                    print("{:112}".format("Sorry the choice you entered is Invalid and you hve run out of attempts!"))
+                    print("{:112}".format("You will be redirected to the main page in a few seconds where you can opt to try again if desired"))
+                    print()
+                    return                
+            else:
+                print("{:112}".format("Invalid Entry! Try Again"))
+                print("  "*21,end="")
+                print("You have ",tries," more tries")
+                tries-=1
+                print()
+                continue
+            while True:
+                print("{:^112}".format("Do you want to continue?"))
+                print(" "*39,end="")
+                ch=input("Enter 'y' for yes and 'n' for no:")
+                if ch=='y':
+                    print("\n\n")
+                    break
+                elif ch=='n':
+                    print()
+                    print("{:^112}".format("You will be redirected to the main menu in a few seconds"))
+                    print("\n\n")
+                    time.sleep(3)
+                    return
+                else:
+                    print("\n\n")
+                    print("{:^112}".format("Invalid Entry!Try Again"))
+                    print()
+                    continue
+            
+
+def auto_update():
+    f1=open(main_file,"r",newline="")
+    f2=open(temp_file,"w",newline="")
+    csv_r=csv.reader(f1)
+    csv_w=csv.writer(f2)
+    for row in csv_r:
+        if row[6]=="nil" or row[6]=="Inactive":
+            csv_w.writerow(row)
+        else:
+            temp=row
+            dates=row[9]
+            last_d_str=dates[-12:-2]
+            today=date.today()
+            last_d=(datetime.datetime.strptime(last_d_str,'%Y-%m-%d')).date()
+            #print("last date=",last_d)
+            #print("last date type=",type(last_d))
+            z=last_d-today
+            diff=z.days
+            if diff<0:
+                temp[6]="Inactive"
+            csv_w.writerow(temp)
+    f1.close()
+    f2.close()
+    copy(temp_file,main_file)
+        
+        
+         
+
+        
+
+#________MAIN PROGRAM_________
+print("{:^80}".format("\n   WELCOME TO THE DELHI HILTON......\n\n"))
+auto_update()
+while True:
+    print(" "*10,"Enter:-")
+    print(" "*10,"'1' To See About Us")
+    print(" "*10,"'2' To Make a booking")
+    print(" "*10,"'3' To Cancel a booking")
+    print(" "*10,"'4' To See the particulars of Bookings")
+    print(" "*10,"'5' To Make updates regarding your profile")
+    print(" "*10,"'6' To Create an account with the Hilton group")
+    print(" "*10,"'7' To Check room availability")
+    print(" "*10,"'8' To Exit")
+    ch=input(" "*12)
+
+    if ch=='1':
+        disp_about()        
+    elif ch=='2':
+        book(login())
+    elif ch=='3':
+        cancel(login())
+    elif ch=='4':
+        bkg_details(login())
+    elif ch=='5':
+        update_prof(login())
+    elif ch=='6':
+        create()
+    elif ch=='7':
+        disp_avail()
+    elif ch=='8':
+        print("\n\n\n")
+        print("   "*16,end="")
+        print("Thank you, visit our page again!")
+        time.sleep(5)
+        exit()
+    else:
+        print()
+        print()
+        print("  "*10,end="")
+        print("Uhoh! Seems Like You Made an Invalid Entry , Try again!")
+        print()
+    print("x"*150,"\n\n")
